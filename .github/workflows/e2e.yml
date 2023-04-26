@@ -1,0 +1,41 @@
+name: Detox Tests
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: iOS Simulator Tests
+    runs-on: macos-12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: "yarn"
+
+      - name: Cache node_modules
+        id: cache
+        uses: actions/cache@v2
+        with:
+          path: ./node_modules
+          key: ${{ runner.os }}-modules-${{ hashFiles('yarn.lock') }}
+
+      - name: Install node_modules
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile
+
+      - name: Pod Install
+        run: cd ios && pod install && cd ..
+
+      - name: Install Applesimutils
+        run: |
+          brew tap wix/brew
+          brew install applesimutils
+
+      - name: Detox build
+        run: yarn detox build -c ios.release
+
+      - name: Detox test
+        run: yarn detox test -c ios.release --cleanup
